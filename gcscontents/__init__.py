@@ -1,0 +1,2 @@
+# from gcscontents.gcloudmanager import GCloudContentsManager
+from .gcloudmanager import GCloudContentsManager
