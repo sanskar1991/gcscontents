@@ -1,6 +1,6 @@
 from gcscontents.genericfsmanager import GenericContentsManager
 from gcscontents.generic_fs import GCSFS
-from gcscontents.gcscontents.nbimports import Unicode
+from gcscontents.nbimports import Unicode
 # from .genericfsmanager import GenericContentsManager
 # from .generic_fs import GCSFS
 # from .nbimports import Unicode
