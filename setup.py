@@ -24,6 +24,7 @@ setup(
     long_description_content_type="text/markdown",
     long_description=LONG_DESCRIPTION,
     packages=find_packages(),
+    url="https://github.com/sanskar1991/gcscontents",
     # package_dir = {'':'gcscontents'},
     python_requires=">=3.7",
     extras_require={
