@@ -12,6 +12,7 @@ from gcscontents.chunks import (
     prune_stale_chunks,
     store_content_chunk,
 )
+
 from gcscontents.generic_fs import GenericFSError, NoSuchFile
 # from .generic_fs import GenericFSError, NoSuchFile
 from gcscontents.nbimports import (
@@ -163,10 +164,10 @@ class GenericContentsManager(ContentsManager, HasTraits):
             content,
         )
         model = base_directory_model(path)
-        if self.fs.isdir(path):
-            lstat = self.fs.lstat(path)
-            if "ST_MTIME" in lstat and lstat["ST_MTIME"]:
-                model["last_modified"] = model["created"] = lstat["ST_MTIME"]
+        # if self.fs.isdir(path):
+        #     lstat = self.fs.lstat(path)
+        #     if "ST_MTIME" in lstat and lstat["ST_MTIME"]:
+        #         model["last_modified"] = model["created"] = lstat["ST_MTIME"]
         if content:
             if not self.dir_exists(path):
                 self.no_such_entity(path)
@@ -181,16 +182,20 @@ class GenericContentsManager(ContentsManager, HasTraits):
         """
         model = base_model(path)
         model["type"] = "notebook"
+        all_content = {}
         if self.fs.isfile(path):
-            model["last_modified"] = model["created"] = self.fs.lstat(path)["ST_MTIME"]
+            all_content = self.fs.read(path, format)
+            try:
+                model['last_modified'] = datetime.datetime.strptime(all_content['last_modified'], "%a, %d %b %Y %H:%M:%S %Z")
+            except ValueError:
+                model['last_modified'] = datetime.datetime.strptime(all_content['last_modified'], "%Y-%m-%dT%H:%M:%S.%fZ")
+            model['created'] = datetime.datetime.strptime(all_content['created'],  "%Y-%m-%dT%H:%M:%S.%fZ")
         else:
             self.do_error("Not Found", 404)
         if content:
             if not self.fs.isfile(path):
                 self.no_such_entity(path)
-            file_content, _ = self.fs.read(path, format)
-            nb_content = reads(file_content, as_version=NBFORMAT_VERSION)
-            self.mark_trusted_cells(nb_content, path)
+            nb_content = all_content['content']
             model["format"] = "json"
             model["content"] = nb_content
             self.validate_notebook_model(model)
@@ -203,7 +208,7 @@ class GenericContentsManager(ContentsManager, HasTraits):
         model = base_model(path)
         model["type"] = "file"
         if self.fs.isfile(path):
-            model["last_modified"] = model["created"] = self.fs.lstat(path)["ST_MTIME"]
+            model["last_modified"] = model["created"] 
         else:
             model["last_modified"] = model["created"] = DUMMY_CREATED_DATE
         if content:
@@ -226,7 +231,6 @@ class GenericContentsManager(ContentsManager, HasTraits):
         """
         ret = []
         for path in paths:
-            # path = self.fs.remove_prefix(path, self.prefix)  # Remove bucket prefix from paths
             if os.path.basename(path) == self.fs.dir_keep_file:
                 continue
             type_ = self.guess_type(path, allow_directory=True)
@@ -243,7 +247,6 @@ class GenericContentsManager(ContentsManager, HasTraits):
     def save(self, model, path):
         """Save a file or directory model to path.
         """
-
         # Chunked uploads
         # See https://jupyter-notebook.readthedocs.io/en/stable/extending/contents.html#chunked-saving
         chunk = model.get("chunk", None)
@@ -258,7 +261,6 @@ class GenericContentsManager(ContentsManager, HasTraits):
 
         if model["type"] not in ("file", "directory", "notebook"):
             self.do_error("Unhandled contents type: %s" % model["type"], 400)
-
         self.run_pre_save_hook(model=model, path=path)
 
         try:
@@ -339,9 +341,11 @@ class GenericContentsManager(ContentsManager, HasTraits):
         file_contents = model["content"]
         file_format = model.get("format")
         self.fs.write(path, file_contents, file_format)
+        return "Success"
 
     def _save_directory(self, path):
         self.fs.mkdir(path)
+        return "Success"
 
     def rename_file(self, old_path, new_path):
         """Rename a file or directory.
